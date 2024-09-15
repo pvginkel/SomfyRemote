@@ -1,0 +1,82 @@
+menu "Device Configuration"
+
+    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
+
+    config DEVICE_CONFIG_ENDPOINT
+        string "Device config endpoint (%s becomes MAC address)"
+
+    config DEVICE_RESTART_ON_FAILURE_INTERVAL
+        int "Timeout after which the device restarts when on the error screen in seconds"
+        default 300
+
+    config DEVICE_LONG_PRESS_MS
+        int "Press duration for long press in ms"
+        default 500
+
+    config DEVICE_PB_PIN
+        int "Push button pin"
+        default -1
+
+    config DEVICE_LR_PIN
+        int "Red led pin"
+        default -1
+
+    config DEVICE_LG_PIN
+        int "Green led pin"
+        default -1
+
+    config DEVICE_MICROPHONE_WS_PIN
+        int "I2S microphones word select pin"
+        default -1
+
+    config DEVICE_MICROPHONE_SCK_PIN
+        int "I2S microphones clock pin"
+        default -1
+
+    config DEVICE_MICROPHONE_DATA_PIN
+        int "I2S microphones data pin"
+        default -1
+
+    config DEVICE_SPEAKER_WS_PIN
+        int "I2S speaker word select pin"
+        default -1
+
+    config DEVICE_SPEAKER_SCK_PIN
+        int "I2S speaker clock pin"
+        default -1
+
+    config DEVICE_SPEAKER_DATA_PIN
+        int "I2S speaker data pin"
+        default -1
+
+    config DEVICE_I2S_SAMPLE_RATE
+        int "I2S sample rate"
+        default 16000
+
+    config DEVICE_I2S_BITS_PER_SAMPLE
+        int "I2S bits per sample"
+        default 16
+
+    config DEVICE_AUDIO_CHUNK_MS
+        int "Audio chunk size in ms"
+        default 20
+
+    config DEVICE_DUMP_AFE_INPUT
+        bool "Dump AFE input to an UDP endpoint"
+        
+    config DEVICE_DUMP_AFE_INPUT_TARGET
+        string "Dump AFE input UDP target endpoint"
+        depends on DEVICE_DUMP_AFE_INPUT
+
+        help
+            Audio will be dumped in stereo 16 bit format. The left channel is
+            the audio as recorded by the microphone and the right channel
+            is the reference channel.
+
+            The format of the target is <ip address>:<port>.
+
+    config DEVICE_SHOW_CPU_USAGE
+        bool "Show CPU usage"
+        default n
+
+endmenu
