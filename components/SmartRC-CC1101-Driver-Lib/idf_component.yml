@@ -1,0 +1,9 @@
+version: "0.4.1"
+description: Somfy_Remote_Lib
+url: https://github.com/Legion2/Somfy_Remote_Lib
+dependencies:
+  idf: ">=5.5"
+  espressif/arduino-esp32: "*"
+files:
+  exclude:
+    - "examples"
