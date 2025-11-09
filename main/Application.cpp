@@ -2,26 +2,17 @@
 
 #include "Application.h"
 
-#include "Messages.h"
 #include "driver/i2c.h"
 #include "nvs_flash.h"
 
 LOG_TAG(Application);
 
-Application::Application()
-    : _network_connection(&_queue),
-      _mqtt_connection(&_queue),
-      _udp_server(11106),
-      _controls(&_queue),
-      _device(_mqtt_connection, _udp_server, _controls) {}
+Application::Application() : _network_connection(&_queue), _mqtt_connection(&_queue), _device(_mqtt_connection) {}
 
 void Application::begin(bool silent) {
     ESP_LOGI(TAG, "Setting up the log manager");
 
     _log_manager.begin();
-    _controls.begin();
-
-    _controls.set_red_runner(new LedFadeRunner(0, 0, 500));
 
     setup_flash();
 
@@ -73,7 +64,6 @@ void Application::begin_network_available() {
         _ota_manager.begin();
     }
 
-    _udp_server.begin();
     _device.begin();
 
     ESP_LOGI(TAG, "Connecting to MQTT");
@@ -89,9 +79,6 @@ void Application::begin_network_available() {
 
     _mqtt_connection.set_configuration(&_configuration);
 
-    _mqtt_connection.set_udp_endpoint(
-        strformat("%s:%d", _network_connection.get_ip_address().c_str(), _udp_server.get_port()));
-
     _mqtt_connection.begin();
 }
 
@@ -102,13 +89,6 @@ void Application::begin_after_initialization() {
     ESP_LOGI(TAG, "esp_reset_reason: %s (%d)", esp_reset_reason_to_name(reset_reason), reset_reason);
 
     ESP_LOGI(TAG, "Startup complete");
-
-    // Enable the buttons.
-    _controls.set_enabled(true);
-    _controls.set_red_runner(new LedOffRunner());
 }
 
-void Application::process() {
-    _queue.process();
-    _controls.update();
-}
+void Application::process() { _queue.process(); }
