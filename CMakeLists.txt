@@ -15,4 +15,4 @@ message(STATUS "Firmware version set to: ${PROJECT_VER}")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
-project(intercom)
+project(somfy-remote)

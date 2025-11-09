@@ -15,7 +15,7 @@ CONFIG_DEVICE_CONFIG_ENDPOINT="http://iotsupport.home/esp32/config/%s.json"
 CONFIG_WIFI_SSID="Thing-Fish"
 CONFIG_WIFI_CONNECT_ATTEMPTS=5
 CONFIG_WIFI_MAX_TX_POWER=44
-CONFIG_OTA_ENDPOINT="http://iotsupport.home/assets/intercom-ota.bin"
+CONFIG_OTA_ENDPOINT="http://iotsupport.home/assets/somfy-remote-ota.bin"
 CONFIG_LOG_ENDPOINT="http://iotlogging.home/"
 
 CONFIG_MQTT_PROTOCOL_5=y

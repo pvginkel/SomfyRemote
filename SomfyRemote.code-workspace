@@ -8,9 +8,6 @@
     },
     {
       "path": "../esp-libs/esp-network-support"
-    },
-    {
-      "path": "../esp-libs/esp-light-algorithms"
     }
   ],
   "settings": {

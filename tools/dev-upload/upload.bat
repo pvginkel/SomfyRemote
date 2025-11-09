@@ -7,7 +7,7 @@ pushd "%~dp0"
 cd ..\..
 
 docker build ^
-    --tag intercom-uploader ^
+    --tag somfy-remote-uploader ^
     . ^
     --file tools/dev-upload/Dockerfile 
 
@@ -15,12 +15,12 @@ echo "%~dp0"
 
 docker run ^
     --rm ^
-    -v %CD%/build/intercom.bin:/workspace/app/intercom-ota.bin ^
+    -v %CD%/build/somfy-remote.bin:/workspace/app/somfy-remote-ota.bin ^
     -v %CD%/../HelmCharts/assets:/workspace/keys ^
     --add-host iotsupport.home:192.168.178.62 ^
-    intercom-uploader ^
+    somfy-remote-uploader ^
     /workspace/keys/kubernetes-signing-key ^
-    /workspace/app/intercom-ota.bin ^
+    /workspace/app/somfy-remote-ota.bin ^
     iotsupport.home
 
 popd
