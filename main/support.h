@@ -28,23 +28,6 @@ using namespace std;
 #define __CONCAT3(a, b, c) a##b##c
 #define CONCAT3(a, b, c) __CONCAT3(a, b, c)
 
-#define CONFIG_DEVICE_I2S_DATA_BIT_WIDTH CONCAT3(I2S_DATA_BIT_WIDTH_, CONFIG_DEVICE_I2S_BITS_PER_SAMPLE, BIT)
-
-#define AUDIO_BUFFER_LEN(ms) (CONFIG_DEVICE_I2S_BITS_PER_SAMPLE / 8 * CONFIG_DEVICE_I2S_SAMPLE_RATE * ms / 1000)
-
-#if (CONFIG_DEVICE_I2S_SAMPLE_RATE != 16000)
-#error Sample rate must be 16000 Hz
-#endif
-
-// At 16000 Hz a single sample is 62.5 microseconds. The macros below
-// transfer between samples and microseconds keeping as much precision
-// as possible.
-
-#define US_TO_SAMPLES(us) (((us) * 2) / 125)
-#define SAMPLES_TO_US(samples) (((samples) * 125) / 2)
-
-#define MS2S(ms) ((ms) / 1000.0f)
-
 #define esp_get_millis() uint32_t(esp_timer_get_time() / 1000ull)
 
 int getisoweek(tm& time_info);
