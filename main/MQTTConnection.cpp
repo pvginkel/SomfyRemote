@@ -112,7 +112,10 @@ void MQTTConnection::event_handler(esp_event_base_t eventBase, int32_t eventId, 
     switch ((esp_mqtt_event_id_t)eventId) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT connected");
-            handle_connected();
+            // On connect we're publishing a large number of messages for metadata.
+            // We need to do this outside of the MQTT loop because otherwise we
+            // wouldn't be able to process in flight ACKs.
+            _queue->enqueue([this]() { handle_connected(); });
             break;
 
         case MQTT_EVENT_DISCONNECTED:
@@ -320,8 +323,8 @@ void MQTTConnection::publish_subdevice_button_discovery(const char* name, const 
                                                         const char* subdevice_name, const char* subdevice_id,
                                                         const char* icon, const char* entity_category,
                                                         const char* device_class) {
-    auto root = create_discovery("button", name, command_topic, subdevice_name, subdevice_id, icon, entity_category,
-                                 device_class, true);
+    auto root = create_discovery("button", name, strformat("%s_%s", subdevice_id, command_topic).c_str(),
+                                 subdevice_name, subdevice_id, icon, entity_category, device_class, true);
 
     cJSON_AddStringToObject(
         *root, "command_topic",
@@ -367,6 +370,8 @@ cJSON_Data MQTTConnection::create_discovery(const char* component, const char* n
 
     auto device_identifier = strformat("%s_%s", TOPIC_PREFIX, _device_id.c_str());
     if (subdevice_id) {
+        cJSON_AddStringToObject(device, "via_device", device_identifier.c_str());
+
         device_identifier += strformat("_%s", subdevice_id);
     }
 
