@@ -18,6 +18,11 @@ void Device::begin() {
             state_changed();
         }
     });
+
+    _mqtt_connection.on_remote_command_requested([this](auto command) {
+        ESP_LOGI(TAG, "Received remote command %d for device %d", static_cast<int>(command.command_id),
+                 command.device_id);
+    });
 }
 
 void Device::state_changed() {
@@ -27,21 +32,11 @@ void Device::state_changed() {
 }
 
 void Device::load_state() {
-    nvs_handle_t handle;
-    auto err = nvs_open("storage", NVS_READONLY, &handle);
-    if (err == ESP_ERR_NVS_NOT_FOUND) {
-        return;
-    }
-    ESP_ERROR_CHECK(err);
-
-    nvs_close(handle);
-
-    ESP_LOGI(TAG, "Loaded audio configuration:");
+    // The device doesn't have any structured state. State for the remote
+    // devices is managed by the SomfyRemote implementation itself.
 }
 
 void Device::save_state() {
-    nvs_handle_t handle;
-    ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &handle));
-
-    nvs_close(handle);
+    // The device doesn't have any structured state. State for the remote
+    // devices is managed by the SomfyRemote implementation itself.
 }

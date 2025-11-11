@@ -107,5 +107,35 @@ esp_err_t DeviceConfiguration::load() {
         _mqtt_password = mqtt_password_item->valuestring;
     }
 
+    auto devices = cJSON_GetObjectItemCaseSensitive(*data, "devices");
+    if (!cJSON_IsArray(devices)) {
+        ESP_LOGE(TAG, "Cannot get devices property");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    cJSON* device = nullptr;
+    cJSON_ArrayForEach(device, devices) {
+        if (!cJSON_IsObject(device)) {
+            ESP_LOGE(TAG, "Device must be an object");
+            return ESP_ERR_INVALID_ARG;
+        }
+
+        auto device_id = cJSON_GetObjectItemCaseSensitive(device, "id");
+        if (!cJSON_IsString(device_id) || !device_id->valuestring) {
+            ESP_LOGE(TAG, "Device ID must be a string");
+            return ESP_ERR_INVALID_ARG;
+        }
+
+        auto device_name = cJSON_GetObjectItemCaseSensitive(device, "name");
+        if (!cJSON_IsString(device_name) || !device_name->valuestring) {
+            ESP_LOGE(TAG, "Device name must be a string");
+            return ESP_ERR_INVALID_ARG;
+        }
+
+        _devices.push_back(RemoteDeviceConfiguration(device_id->valuestring, device_name->valuestring));
+
+        ESP_LOGI(TAG, "Device ID %s, name %s", device_id->valuestring, device_name->valuestring);
+    }
+
     return ERR_OK;
 }

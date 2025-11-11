@@ -159,7 +159,7 @@ void MQTTConnection::event_handler(esp_event_base_t eventBase, int32_t eventId, 
 }
 
 void MQTTConnection::handle_connected() {
-    subscribe(_topic_prefix + "set/+");
+    subscribe(_topic_prefix + "set/#");
 
     publish_configuration();
     publish_discovery();
@@ -186,16 +186,49 @@ void MQTTConnection::handle_data(esp_mqtt_event_handle_t event) {
     auto sub_topic = topic.c_str() + _topic_prefix.length();
     auto data = string(event->data, event->data_len);
 
-    if (strcmp(sub_topic, "set/identify") == 0) {
-        ESP_LOGI(TAG, "Requested identification");
-
-        _identify_requested.queue(_queue);
-    } else if (strcmp(sub_topic, "set/restart") == 0) {
-        ESP_LOGI(TAG, "Requested restart");
-
-        _restart_requested.queue(_queue);
-    } else {
+    if (strncmp(sub_topic, "set/", 4) != 0) {
         ESP_LOGE(TAG, "Unknown topic %s", topic.c_str());
+        return;
+    }
+
+    auto set_topic = sub_topic + 4;
+
+    int remote_id = -1;
+
+    auto offset = strchr(set_topic, '/');
+    if (offset) {
+        auto remote_name = string(set_topic, offset - set_topic);
+        remote_id = find_remote_id(remote_name);
+        if (remote_id == -1) {
+            ESP_LOGE(TAG, "Unknown remote ID %s", remote_name.c_str());
+            return;
+        }
+
+        set_topic = offset + 1;
+    }
+
+    if (remote_id == -1) {
+        if (strcmp(set_topic, "identify") == 0) {
+            ESP_LOGI(TAG, "Requested identification");
+
+            _identify_requested.queue(_queue);
+        } else if (strcmp(set_topic, "restart") == 0) {
+            ESP_LOGI(TAG, "Requested restart");
+
+            _restart_requested.queue(_queue);
+        } else {
+            ESP_LOGE(TAG, "Unknown topic %s", topic.c_str());
+        }
+    } else {
+        auto command_id = command_id_from_name(set_topic);
+        if (!command_id.has_value()) {
+            ESP_LOGE(TAG, "Unknown command ID %s", offset + 1);
+            return;
+        }
+
+        ESP_LOGI(TAG, "Requested remote command %s", sub_topic);
+
+        _remote_command_requested.queue(_queue, {remote_id, command_id.value()});
     }
 }
 
@@ -237,66 +270,31 @@ void MQTTConnection::publish_json(cJSON* root, const string& topic, bool retain)
     cJSON_free(json);
 }
 
+#define REGISTER_DEVICE_BUTTON(device, name, key, icon)                                                              \
+    publish_subdevice_button_discovery(name, key, device.get_name().c_str(), device.get_id().c_str(), icon, nullptr, \
+                                       nullptr);
+
 void MQTTConnection::publish_discovery() {
-    publish_number_discovery("Volume", "volume", "volume", "mdi:knob", "config", "sound_pressure", "Db", 0, 1, 0.1);
-    publish_binary_sensor_discovery("Playing", "playing", "mdi:play", "diagnostic", nullptr, false);
-    publish_binary_sensor_discovery("Recording", "recording", "mdi:record", "diagnostic", nullptr, false);
-    publish_switch_discovery("Enabled", "enabled", "enabled", "mdi:toggle-switch", "config", nullptr);
     publish_button_discovery("Identify", "identify", nullptr, "config", "identify");
     publish_button_discovery("Restart", "restart", nullptr, "config", "restart");
-}
 
-void MQTTConnection::publish_number_discovery(const char* name, const char* command_topic, const char* state_property,
-                                              const char* icon, const char* entity_category, const char* device_class,
-                                              const char* unit_of_measurement, double min, double max, double step) {
-    auto root = create_discovery("number", name, state_property, icon, entity_category, device_class, true);
-
-    if (unit_of_measurement) {
-        cJSON_AddStringToObject(*root, "unit_of_measurement", unit_of_measurement);
+    for (const auto& device : _configuration->get_devices()) {
+        REGISTER_DEVICE_BUTTON(device, "My", "my", "mdi:star");
+        REGISTER_DEVICE_BUTTON(device, "Up", "up", "mdi:arrow-up-bold");
+        REGISTER_DEVICE_BUTTON(device, "My Up", "my_up", "mdi:arrow-up-bold-circle");
+        REGISTER_DEVICE_BUTTON(device, "Down", "down", "mdi:arrow-down-bold");
+        REGISTER_DEVICE_BUTTON(device, "My Down", "my_down", "mdi:arrow-down-bold-circle");
+        REGISTER_DEVICE_BUTTON(device, "Up Down", "up_down", "mdi:arrow-up-down-bold");
+        REGISTER_DEVICE_BUTTON(device, "Prog", "prog", "mdi:cog");
+        REGISTER_DEVICE_BUTTON(device, "Sun Flag", "sun_flag", "mdi:weather-sunny");
+        REGISTER_DEVICE_BUTTON(device, "Flag", "flag", "mdi:weather-sunny-off");
     }
-    cJSON_AddNumberToObject(*root, "min", min);
-    cJSON_AddNumberToObject(*root, "max", max);
-    cJSON_AddNumberToObject(*root, "step", step);
-    cJSON_AddStringToObject(*root, "command_topic",
-                            strformat("somfy_remote/%s/set/%s", _device_id.c_str(), command_topic).c_str());
-    cJSON_AddStringToObject(*root, "state_topic", strformat("somfy_remote/%s/state", _device_id.c_str()).c_str());
-    cJSON_AddStringToObject(*root, "value_template", strformat("{{ value_json.%s }}", state_property).c_str());
-
-    publish_json(*root, strformat("homeassistant/number/%s/%s/config", _device_id.c_str(), state_property), true);
-}
-
-void MQTTConnection::publish_binary_sensor_discovery(const char* name, const char* state_property, const char* icon,
-                                                     const char* entity_category, const char* device_class,
-                                                     bool enabled_by_default) {
-    auto root = create_discovery("binary_sensor", name, state_property, icon, entity_category, device_class,
-                                 enabled_by_default);
-
-    cJSON_AddBoolToObject(*root, "payload_on", true);
-    cJSON_AddBoolToObject(*root, "payload_off", false);
-    cJSON_AddStringToObject(*root, "state_topic", strformat("somfy_remote/%s/state", _device_id.c_str()).c_str());
-    cJSON_AddStringToObject(*root, "value_template", strformat("{{ value_json.%s }}", state_property).c_str());
-
-    publish_json(*root, strformat("homeassistant/binary_sensor/%s/%s/config", _device_id.c_str(), state_property),
-                 true);
-}
-
-void MQTTConnection::publish_switch_discovery(const char* name, const char* command_topic, const char* state_property,
-                                              const char* icon, const char* entity_category, const char* device_class) {
-    auto root = create_discovery("switch", name, state_property, icon, entity_category, device_class, true);
-
-    cJSON_AddStringToObject(*root, "command_topic",
-                            strformat("somfy_remote/%s/set/%s", _device_id.c_str(), command_topic).c_str());
-    cJSON_AddBoolToObject(*root, "payload_on", true);
-    cJSON_AddBoolToObject(*root, "payload_off", false);
-    cJSON_AddStringToObject(*root, "state_topic", strformat("somfy_remote/%s/state", _device_id.c_str()).c_str());
-    cJSON_AddStringToObject(*root, "value_template", strformat("{{ value_json.%s }}", state_property).c_str());
-
-    publish_json(*root, strformat("homeassistant/switch/%s/%s/config", _device_id.c_str(), state_property), true);
 }
 
 void MQTTConnection::publish_button_discovery(const char* name, const char* command_topic, const char* icon,
                                               const char* entity_category, const char* device_class) {
-    auto root = create_discovery("button", name, command_topic, icon, entity_category, device_class, true);
+    auto root =
+        create_discovery("button", name, command_topic, nullptr, nullptr, icon, entity_category, device_class, true);
 
     cJSON_AddStringToObject(*root, "command_topic",
                             strformat("somfy_remote/%s/set/%s", _device_id.c_str(), command_topic).c_str());
@@ -305,8 +303,26 @@ void MQTTConnection::publish_button_discovery(const char* name, const char* comm
     publish_json(*root, strformat("homeassistant/button/%s/%s/config", _device_id.c_str(), command_topic), true);
 }
 
+void MQTTConnection::publish_subdevice_button_discovery(const char* name, const char* command_topic,
+                                                        const char* subdevice_name, const char* subdevice_id,
+                                                        const char* icon, const char* entity_category,
+                                                        const char* device_class) {
+    auto root = create_discovery("button", name, command_topic, subdevice_name, subdevice_id, icon, entity_category,
+                                 device_class, true);
+
+    cJSON_AddStringToObject(
+        *root, "command_topic",
+        strformat("somfy_remote/%s/set/%s/%s", _device_id.c_str(), subdevice_id, command_topic).c_str());
+    cJSON_AddStringToObject(*root, "payload_press", "true");
+
+    publish_json(*root,
+                 strformat("homeassistant/button/%s_%s/%s/config", _device_id.c_str(), subdevice_id, command_topic),
+                 true);
+}
+
 cJSON_Data MQTTConnection::create_discovery(const char* component, const char* name, const char* object_id,
-                                            const char* icon, const char* entity_category, const char* device_class,
+                                            const char* subdevice_name, const char* subdevice_id, const char* icon,
+                                            const char* entity_category, const char* device_class,
                                             bool enabled_by_default) {
     // Device classes can be found here: https://www.home-assistant.io/integrations/sensor/#device-class.
     // Entity category is either config or diagnostic.
@@ -336,13 +352,22 @@ cJSON_Data MQTTConnection::create_discovery(const char* component, const char* n
 
     const auto device = cJSON_AddObjectToObject(root, "device");
 
+    auto device_identifier = strformat("%s_%s", TOPIC_PREFIX, _device_id.c_str());
+    if (subdevice_id) {
+        device_identifier += strformat("_%s", subdevice_id);
+    }
+
     const auto identifiers = cJSON_AddArrayToObject(device, "identifiers");
-    cJSON_AddItemToArray(identifiers, cJSON_CreateString(strformat("%s_%s", TOPIC_PREFIX, _device_id.c_str()).c_str()));
+    cJSON_AddItemToArray(identifiers, cJSON_CreateString(device_identifier.c_str()));
 
     cJSON_AddStringToObject(device, "manufacturer", DEVICE_MANUFACTURER);
     cJSON_AddStringToObject(device, "model", DEVICE_MODEL);
     cJSON_AddStringToObject(device, "model_id", DEVICE_MODEL_ID);
-    cJSON_AddStringToObject(device, "name", _configuration->get_device_name().c_str());
+    if (subdevice_name) {
+        cJSON_AddStringToObject(device, "name", subdevice_name);
+    } else {
+        cJSON_AddStringToObject(device, "name", _configuration->get_device_name().c_str());
+    }
     cJSON_AddStringToObject(device, "sw_version", get_firmware_version().c_str());
 
     cJSON_AddStringToObject(root, "unique_id", strformat("%s_%s_%s", _device_id.c_str(), component, object_id).c_str());
@@ -383,4 +408,48 @@ void MQTTConnection::send_state(DeviceState& state) {
     }
 
     cJSON_free(json);
+}
+
+optional<RemoteCommandId> MQTTConnection::command_id_from_name(const char* name) {
+    if (strcmp(name, "my") == 0) {
+        return RemoteCommandId::My;
+    }
+    if (strcmp(name, "up") == 0) {
+        return RemoteCommandId::Up;
+    }
+    if (strcmp(name, "my_up") == 0) {
+        return RemoteCommandId::MyUp;
+    }
+    if (strcmp(name, "down") == 0) {
+        return RemoteCommandId::Down;
+    }
+    if (strcmp(name, "my_down") == 0) {
+        return RemoteCommandId::MyDown;
+    }
+    if (strcmp(name, "up_down") == 0) {
+        return RemoteCommandId::UpDown;
+    }
+    if (strcmp(name, "prog") == 0) {
+        return RemoteCommandId::Prog;
+    }
+    if (strcmp(name, "sun_flag") == 0) {
+        return RemoteCommandId::SunFlag;
+    }
+    if (strcmp(name, "flag") == 0) {
+        return RemoteCommandId::Flag;
+    }
+    return {};
+}
+
+int MQTTConnection::find_remote_id(const string& remote_name) {
+    int index = 0;
+
+    for (const auto& device : _configuration->get_devices()) {
+        if (device.get_id() == remote_name) {
+            return index;
+        }
+        index++;
+    }
+
+    return -1;
 }

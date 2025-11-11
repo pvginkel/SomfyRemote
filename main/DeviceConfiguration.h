@@ -1,5 +1,18 @@
 #pragma once
 
+#include <vector>
+
+class RemoteDeviceConfiguration {
+    string _id;
+    string _name;
+
+public:
+    RemoteDeviceConfiguration(const string& id, const string& name) : _id(id), _name(name) {}
+
+    const string& get_id() const { return _id; }
+    const string& get_name() const { return _name; }
+};
+
 class DeviceConfiguration {
     static constexpr auto DEFAULT_ENABLE_OTA = true;
 
@@ -10,6 +23,7 @@ class DeviceConfiguration {
     string _mqtt_endpoint;
     string _mqtt_username;
     string _mqtt_password;
+    vector<RemoteDeviceConfiguration> _devices;
 
 public:
     DeviceConfiguration();
@@ -27,4 +41,5 @@ public:
     const string& get_mqtt_endpoint() { return _mqtt_endpoint; }
     const string& get_mqtt_username() { return _mqtt_username; }
     const string& get_mqtt_password() { return _mqtt_password; }
+    const vector<RemoteDeviceConfiguration>& get_devices() const { return _devices; }
 };
