@@ -10,6 +10,7 @@ enum class RemoteCommandId : int {
     Prog = 0x8,
     SunFlag = 0x9,
     Flag = 0xA,
+    Long = 0x80
 };
 
 class RemoteDevice {
@@ -19,7 +20,7 @@ class RemoteDevice {
 public:
     RemoteDevice(const string& device_id);
 
-    void send_command(RemoteCommandId command_id);
+    void send_command(RemoteCommandId command_id, bool long_press);
 
 private:
     uint32_t get_remote_id();

@@ -1,6 +1,6 @@
 {
   "idf.adapterTargetName": "esp32s3",
-  "idf.portWin": "COM6",
+  "idf.portWin": "COM3",
   "idf.flashType": "UART",
   "files.associations": {
     "array": "cpp",
@@ -54,13 +54,7 @@
     "utility": "cpp",
     "format": "cpp"
   },
-  "cSpell.words": [
-    "LOGI",
-    "Lvgl",
-    "MQTT",
-    "roboto",
-    "setpoint"
-  ],
+  "cSpell.words": ["LOGI", "Lvgl", "MQTT", "roboto", "setpoint"],
   "files.exclude": {
     "documentation": true,
     "LvglWindowsSimulator": true
@@ -73,10 +67,7 @@
     "ESP_ROM_ELF_DIR": "C:\\Users\\pvgin\\.espressif\\tools\\esp-rom-elfs\\20230320/",
     "IDF_TARGET": "esp32s3"
   },
-  "idf.openOcdConfigs": [
-    "interface/ftdi/esp_ftdi.cfg",
-    "target/esp32s3.cfg"
-  ],
+  "idf.openOcdConfigs": ["interface/ftdi/esp_ftdi.cfg", "target/esp32s3.cfg"],
   "idf.pythonInstallPath": "C:\\Users\\pvgin\\.espressif\\tools\\idf-python\\3.11.2\\python.exe",
   "clangd.path": "C:\\Users\\pvgin\\.espressif\\tools\\esp-clang\\esp-19.1.2_20250312\\esp-clang\\bin\\clangd.exe",
   "clangd.arguments": [

@@ -21,10 +21,8 @@ void Device::begin() {
         }
     });
 
-    _mqtt_connection.on_remote_command_requested([this](auto command) {
-        ESP_LOGI(TAG, "Received remote command %d for device %d", static_cast<int>(command.command_id),
-                 command.device_id);
-    });
+    _mqtt_connection.on_remote_command_requested(
+        [this](auto command) { _devices.queue_command(command.device_id, command.command_id, command.long_press); });
 }
 
 void Device::set_configuration(DeviceConfiguration* configuration) { _devices.set_configuration(configuration); }

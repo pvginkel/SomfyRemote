@@ -220,15 +220,25 @@ void MQTTConnection::handle_data(esp_mqtt_event_handle_t event) {
             ESP_LOGE(TAG, "Unknown topic %s", topic.c_str());
         }
     } else {
-        auto command_id = command_id_from_name(set_topic);
+        auto len = strlen(set_topic);
+        bool long_press = false;
+
+        if (len > 5 && strcmp(set_topic + len - 5, "_long") == 0) {
+            len -= 5;
+            long_press = true;
+        }
+
+        const auto match = string(set_topic, len);
+
+        auto command_id = command_id_from_name(match.c_str());
         if (!command_id.has_value()) {
-            ESP_LOGE(TAG, "Unknown command ID %s", offset + 1);
+            ESP_LOGE(TAG, "Unknown command ID %s", set_topic);
             return;
         }
 
         ESP_LOGI(TAG, "Requested remote command %s", sub_topic);
 
-        _remote_command_requested.queue(_queue, {remote_id, command_id.value()});
+        _remote_command_requested.queue(_queue, {remote_id, command_id.value(), long_press});
     }
 }
 
@@ -280,12 +290,15 @@ void MQTTConnection::publish_discovery() {
 
     for (const auto& device : _configuration->get_devices()) {
         REGISTER_DEVICE_BUTTON(device, "My", "my", "mdi:star");
+        REGISTER_DEVICE_BUTTON(device, "My (long)", "my_long", "mdi:star");
         REGISTER_DEVICE_BUTTON(device, "Up", "up", "mdi:arrow-up-bold");
         REGISTER_DEVICE_BUTTON(device, "My Up", "my_up", "mdi:arrow-up-bold-circle");
         REGISTER_DEVICE_BUTTON(device, "Down", "down", "mdi:arrow-down-bold");
         REGISTER_DEVICE_BUTTON(device, "My Down", "my_down", "mdi:arrow-down-bold-circle");
         REGISTER_DEVICE_BUTTON(device, "Up Down", "up_down", "mdi:arrow-up-down-bold");
+        REGISTER_DEVICE_BUTTON(device, "Up Down (long)", "up_down_long", "mdi:arrow-up-down-bold");
         REGISTER_DEVICE_BUTTON(device, "Prog", "prog", "mdi:cog");
+        REGISTER_DEVICE_BUTTON(device, "Prog (long)", "prog_long", "mdi:cog");
         REGISTER_DEVICE_BUTTON(device, "Sun Flag", "sun_flag", "mdi:weather-sunny");
         REGISTER_DEVICE_BUTTON(device, "Flag", "flag", "mdi:weather-sunny-off");
     }

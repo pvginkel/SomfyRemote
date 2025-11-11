@@ -24,7 +24,7 @@ RemoteDevice::RemoteDevice(const string& device_id) : _device_id(device_id) {
 
     ESP_LOGI(TAG, "Assigned remote ID %06" PRIX32 " to device %s", remote_id, _device_id.c_str());
 
-    auto wrapper = new SomfyRemoteWrapper(CONFIG_DEVICE_GDO1_PIN, remote_id, _device_id.c_str());
+    auto wrapper = new SomfyRemoteWrapper(CONFIG_DEVICE_GDO0_PIN, remote_id, _device_id.c_str());
 
     wrapper->remote.setup();
 
@@ -50,6 +50,8 @@ uint32_t RemoteDevice::get_remote_id() {
     return remote_id;
 }
 
-void RemoteDevice::send_command(RemoteCommandId command_id) {
-    ((SomfyRemoteWrapper*)_somfy_remote)->remote.sendCommand(static_cast<Command>(command_id));
+void RemoteDevice::send_command(RemoteCommandId command_id, bool long_press) {
+    const auto iters = long_press ? SOMFY_MS_TO_ITERS(2000) : 4;
+
+    ((SomfyRemoteWrapper*)_somfy_remote)->remote.sendCommand(static_cast<Command>(command_id), iters);
 }

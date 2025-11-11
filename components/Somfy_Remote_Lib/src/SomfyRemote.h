@@ -4,6 +4,9 @@
 
 #include "RollingCodeStorage.h"
 
+#define SOMFY_MS_PER_ITER 165
+#define SOMFY_MS_TO_ITERS(ms) (((ms) + SOMFY_MS_PER_ITER - 1) / SOMFY_MS_PER_ITER)
+
 enum class Command : byte {
 	My = 0x1,
 	Up = 0x2,
@@ -20,17 +23,17 @@ class SomfyRemote {
 private:
 	byte emitterPin;
 	uint32_t remote;
-	RollingCodeStorage *const rollingCodeStorage;
+	RollingCodeStorage* const rollingCodeStorage;
 
-	void buildFrame(byte *frame, Command command, uint16_t code);
-	void sendFrame(byte *frame, byte sync);
-	void printFrame(byte *frame);
+	void buildFrame(byte* frame, Command command, uint16_t code);
+	void sendFrame(byte* frame, byte sync);
+	void printFrame(byte* frame);
 
 	void sendHigh(uint16_t durationInMicroseconds);
 	void sendLow(uint16_t durationInMicroseconds);
 
 public:
-	SomfyRemote(byte emitterPin, uint32_t remote, RollingCodeStorage *rollingCodeStorage);
+	SomfyRemote(byte emitterPin, uint32_t remote, RollingCodeStorage* rollingCodeStorage);
 	void setup();
 	/**
 	 * Send a command with this SomfyRemote.
@@ -51,4 +54,4 @@ public:
 	void sendCommandWithCode(Command command, uint16_t rollingCode, int repeat = 4);
 };
 
-Command getSomfyCommand(const String &string);
+Command getSomfyCommand(const String& string);

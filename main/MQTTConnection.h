@@ -18,6 +18,7 @@ struct MQTTConnectionState {
 struct MQTTRemoteCommand {
     int device_id;
     RemoteCommandId command_id;
+    bool long_press;
 };
 
 class MQTTConnection {
