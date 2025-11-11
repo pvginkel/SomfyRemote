@@ -1,3 +1,4 @@
+#include "NVSRollingCodeStorage.h"
 #include "SomfyRemote.h"
 
 // Comment to ensure the SomfyRemote.h header stays at the top.
@@ -6,10 +7,49 @@
 
 #include "RemoteDevice.h"
 
+#define NVS_STORAGE "somfy_remotes"
+
 LOG_TAG(RemoteDevice);
 
-RemoteDevice::RemoteDevice(const string& device_id) : _device_id(device_id) {}
+struct SomfyRemoteWrapper {
+    NVSRollingCodeStorage code_storage;
+    SomfyRemote remote;
+
+    SomfyRemoteWrapper(uint8_t emitter_pin, uint32_t remote, const char* nvs_key)
+        : code_storage(NVS_STORAGE, nvs_key), remote(emitter_pin, remote, &code_storage) {}
+};
+
+RemoteDevice::RemoteDevice(const string& device_id) : _device_id(device_id) {
+    const auto remote_id = get_remote_id();
+
+    ESP_LOGI(TAG, "Assigned remote ID %06" PRIX32 " to device %s", remote_id, _device_id.c_str());
+
+    auto wrapper = new SomfyRemoteWrapper(CONFIG_DEVICE_GDO1_PIN, remote_id, _device_id.c_str());
+
+    wrapper->remote.setup();
+
+    _somfy_remote = wrapper;
+}
+
+uint32_t RemoteDevice::get_remote_id() {
+    nvs_handle rcs_handle;
+    ESP_ERROR_CHECK(nvs_open(NVS_STORAGE, NVS_READWRITE, &rcs_handle));
+
+    const auto key = strformat("%s_id", _device_id.c_str());
+
+    uint32_t remote_id;
+    auto err = nvs_get_u32(rcs_handle, key.c_str(), &remote_id);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        remote_id = esp_random() & 0xffffff;
+        ESP_ERROR_CHECK(nvs_set_u32(rcs_handle, key.c_str(), remote_id));
+    } else {
+        ESP_ERROR_CHECK(err);
+    }
+    ESP_ERROR_CHECK(nvs_commit(rcs_handle));
+
+    return remote_id;
+}
 
 void RemoteDevice::send_command(RemoteCommandId command_id) {
-    ESP_LOGI(TAG, "Sending command %d to device %s", static_cast<int>(command_id), _device_id.c_str());
+    ((SomfyRemoteWrapper*)_somfy_remote)->remote.sendCommand(static_cast<Command>(command_id));
 }

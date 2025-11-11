@@ -78,6 +78,7 @@ void Application::begin_network_available() {
     });
 
     _mqtt_connection.set_configuration(&_configuration);
+    _device.set_configuration(&_configuration);
 
     _mqtt_connection.begin();
 }

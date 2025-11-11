@@ -112,7 +112,8 @@
       "syncstream": "cpp",
       "typeindex": "cpp",
       "valarray": "cpp",
-      "text_encoding": "cpp"
+      "text_encoding": "cpp",
+      "generator": "cpp"
     }
   }
 }

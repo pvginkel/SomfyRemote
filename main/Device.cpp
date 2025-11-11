@@ -11,6 +11,8 @@ Device::Device(MQTTConnection& mqtt_connection) : _mqtt_connection(mqtt_connecti
 void Device::begin() {
     load_state();
 
+    ESP_ERROR_CHECK(_devices.begin());
+
     _mqtt_connection.on_restart_requested([]() { esp_restart(); });
 
     _mqtt_connection.on_connected_changed([this](auto state) {
@@ -24,6 +26,8 @@ void Device::begin() {
                  command.device_id);
     });
 }
+
+void Device::set_configuration(DeviceConfiguration* configuration) { _devices.set_configuration(configuration); }
 
 void Device::state_changed() {
     if (_mqtt_connection.is_connected()) {
