@@ -4,7 +4,7 @@ withCredentials([
     string(credentialsId: 'WIFI_PASSWORD', variable: 'WIFI_PASSWORD'),
 ]) {
     podTemplate(inheritFrom: 'jenkins-agent-large', containers: [
-        containerTemplate(name: 'idf', image: 'espressif/idf:v5.3.2', command: 'sleep', args: 'infinity', envVars: [
+        containerTemplate(name: 'idf', image: 'espressif/idf:v5.5.1', command: 'sleep', args: 'infinity', envVars: [
             containerEnvVar(key: 'WIFI_PASSWORD', value: '$WIFI_PASSWORD'),
         ])
     ]) {
