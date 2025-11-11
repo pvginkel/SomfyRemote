@@ -25,16 +25,8 @@ withCredentials([
                         // Necessary because the IDF container doesn't have support
                         // for setting the uid/gid.
                         sh 'git config --global --add safe.directory \'*\''
-                        
-                        // The Docker build isn't resolving the libraries from the
-                        // relative folder. Not sure why. Instead it expects the
-                        // components to be in the components folder.
-                        sh 'mkdir -p components'
-                        sh 'cp -a ../esp-libs/esp-support components'
-                        sh 'cp -a ../esp-libs/esp-network-support components'
 
-                        sh 'chmod +x scripts/dockerbuild.sh'
-                        sh '/opt/esp/entrypoint.sh scripts/dockerbuild.sh'
+                        sh '/opt/esp/entrypoint.sh idf.py build'
                     }
                 }
             }
