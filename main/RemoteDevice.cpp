@@ -51,7 +51,15 @@ uint32_t RemoteDevice::get_remote_id() {
 }
 
 void RemoteDevice::send_command(RemoteCommandId command_id, bool long_press) {
-    const auto iters = long_press ? SOMFY_MS_TO_ITERS(2000) : 4;
+    int repeat;
+    if (long_press) {
+        // I'm really not sure what "long" is. For the Up/Down command 2 seconds seems fine. But
+        // for the My command, to switch motor direction, 2 seconds is not enough. Queueing a
+        // second long press works sometimes, but not consistently.
+        repeat = command_id == RemoteCommandId::My ? SOMFY_MS_TO_ITERS(4000) : SOMFY_MS_TO_ITERS(2000);
+    } else {
+        repeat = 4;
+    }
 
-    ((SomfyRemoteWrapper*)_somfy_remote)->remote.sendCommand(static_cast<Command>(command_id), iters);
+    ((SomfyRemoteWrapper*)_somfy_remote)->remote.sendCommand(static_cast<Command>(command_id), repeat);
 }
