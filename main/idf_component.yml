@@ -4,3 +4,7 @@ dependencies:
     path: ../../esp-libs/esp-network-support
   esp-support:
     path: ../../esp-libs/esp-support
+  esp-mqtt-support:
+    path: ../../esp-libs/esp-mqtt-support
+  esp-mdm:
+    path: ../../esp-libs/esp-mdm

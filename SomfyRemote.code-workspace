@@ -1,14 +1,20 @@
 {
   "folders": [
     {
-      "path": "."
+      "path": ".",
     },
     {
-      "path": "../esp-libs/esp-support"
+      "path": "../esp-libs/esp-support",
     },
     {
-      "path": "../esp-libs/esp-network-support"
-    }
+      "path": "../esp-libs/esp-network-support",
+    },
+    {
+      "path": "../esp-libs/esp-mqtt-support",
+    },
+    {
+      "path": "../esp-libs/esp-mdm",
+    },
   ],
   "settings": {
     "files.associations": {
@@ -113,7 +119,7 @@
       "typeindex": "cpp",
       "valarray": "cpp",
       "text_encoding": "cpp",
-      "generator": "cpp"
-    }
-  }
+      "generator": "cpp",
+    },
+  },
 }

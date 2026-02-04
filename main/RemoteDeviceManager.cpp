@@ -16,7 +16,7 @@ LOG_TAG(RemoteDeviceManager);
 
 RemoteDeviceManager::RemoteDeviceManager() {
     _queue = xQueueCreate(10, sizeof(RemoteCommand));
-    ESP_ERROR_ASSERT(_queue);
+    ESP_ASSERT_CHECK(_queue);
 
     xTaskCreate([](auto arg) { ((RemoteDeviceManager*)arg)->task(); }, "RemoteDeviceManager::task",
                 CONFIG_ESP_MAIN_TASK_STACK_SIZE, this, 5, nullptr);

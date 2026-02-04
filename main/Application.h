@@ -1,32 +1,20 @@
 #pragma once
 
-#include "Device.h"
+#include "ApplicationBase.h"
 #include "DeviceConfiguration.h"
-#include "LogManager.h"
 #include "MQTTConnection.h"
-#include "NetworkConnection.h"
-#include "OTAManager.h"
-#include "Queue.h"
+#include "RemoteDeviceManager.h"
 
-class Application {
-    NetworkConnection _network_connection;
-    MQTTConnection _mqtt_connection;
-    Device _device;
-    OTAManager _ota_manager;
-    Queue _queue;
+class Application : public ApplicationBase {
     DeviceConfiguration _configuration;
-    LogManager _log_manager;
+    RemoteDeviceManager _devices;
 
-public:
-    Application();
-
-    void begin(bool silent);
-    void process();
+protected:
+    void do_begin() override;
+    void do_ready() override;
+    void do_configuration_loaded(cJSON* data) override;
 
 private:
-    void setup_flash();
-    void do_begin(bool silent);
-    void begin_network();
-    void begin_network_available();
-    void begin_after_initialization();
+    void state_changed();
+    void publish_mqtt_discovery();
 };

@@ -1,6 +1,6 @@
 {
   "idf.adapterTargetName": "esp32s3",
-  "idf.portWin": "COM6",
+  "idf.portWin": "COM3",
   "idf.flashType": "UART",
   "files.associations": {
     "array": "cpp",
@@ -74,5 +74,6 @@
     "--background-index",
     "--query-driver=C:\\Users\\pvgin\\.espressif\\tools\\xtensa-esp-elf\\esp-14.2.0_20241119\\xtensa-esp-elf\\bin\\xtensa-esp32s3-elf-gcc.exe",
     "--compile-commands-dir=c:\\Projects\\SomfyRemote\\build"
-  ]
+  ],
+  "idf.currentSetup": "C:\\Users\\pvgin\\esp\\v5.5.2\\esp-idf"
 }

@@ -7,89 +7,92 @@
 
 LOG_TAG(Application);
 
-Application::Application() : _network_connection(&_queue), _mqtt_connection(&_queue), _device(_mqtt_connection) {}
+void Application::do_begin() {
+    get_mqtt_connection().on_publish_discovery([this]() { publish_mqtt_discovery(); });
 
-void Application::begin(bool silent) {
-    ESP_LOGI(TAG, "Setting up the log manager");
-
-    _log_manager.begin();
-
-    setup_flash();
-
-    do_begin(silent);
-}
-
-void Application::setup_flash() {
-    ESP_LOGI(TAG, "Setting up flash");
-
-    auto ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
-}
-
-void Application::do_begin(bool silent) { begin_network(); }
-
-void Application::begin_network() {
-    ESP_LOGI(TAG, "Connecting to WiFi");
-
-    _network_connection.on_state_changed([this](auto state) {
+    get_mqtt_connection().on_connected_changed([this](auto state) {
         if (state.connected) {
-            begin_network_available();
-        } else {
-            ESP_LOGE(TAG, "Failed to connect to WiFi; restarting");
-            esp_restart();
+            state_changed();
         }
     });
-
-    _network_connection.begin(CONFIG_WIFI_PASSWORD);
 }
 
-void Application::begin_network_available() {
-    ESP_LOGI(TAG, "Getting device configuration");
+void Application::do_configuration_loaded(cJSON* data) {
+    ESP_ERROR_CHECK(_configuration.load(data));
 
-    auto err = _configuration.load();
+    _devices.set_configuration(&_configuration);
 
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get configuration; restarting");
-        esp_restart();
+    get_mqtt_connection().on_publish_discovery([this]() { publish_mqtt_discovery(); });
+
+    get_mqtt_connection().on_connected_changed([this](auto state) {
+        if (state.connected) {
+            state_changed();
+        }
+    });
+}
+
+void Application::state_changed() {
+    if (!get_mqtt_connection().is_connected()) {
         return;
     }
 
-    _log_manager.set_device_entity_id(strdup(_configuration.get_device_entity_id().c_str()));
+    get_mqtt_connection().send_state();
+}
 
-    if (_configuration.get_enable_ota()) {
-        _ota_manager.begin();
-    }
+#define REGISTER_DEVICE_BUTTON(device, device_id, name_, key_, icon_, command, long_press) \
+    get_mqtt_connection().publish_button_discovery(                                        \
+        {                                                                                  \
+            .name = name_,                                                                 \
+            .object_id = key_,                                                             \
+            .icon = icon_,                                                                 \
+            .subdevice_name = device.get_name().c_str(),                                   \
+            .subdevice_id = device.get_id().c_str(),                                       \
+        },                                                                                 \
+        [this, device_id]() {                                                              \
+            ESP_LOGI(TAG, "Requested button press " name_);                                \
+                                                                                           \
+            _devices.queue_command(device_id, RemoteCommandId::command, long_press);       \
+        });
 
-    _device.begin();
+void Application::publish_mqtt_discovery() {
+    get_mqtt_connection().publish_button_discovery(
+        {
+            .name = "Identify",
+            .object_id = "identify",
+            .entity_category = "config",
+            .device_class = "identify",
+        },
+        []() { ESP_LOGI(TAG, "Requested identification"); });
 
-    ESP_LOGI(TAG, "Connecting to MQTT");
+    get_mqtt_connection().publish_button_discovery(
+        {
+            .name = "Restart",
+            .object_id = "restart",
+            .entity_category = "config",
+            .device_class = "restart",
+        },
+        []() {
+            ESP_LOGI(TAG, "Requested restart");
 
-    _mqtt_connection.on_connected_changed([this](auto state) {
-        if (state.connected) {
-            _queue.enqueue([this]() { begin_after_initialization(); });
-        } else {
-            ESP_LOGE(TAG, "MQTT connection lost");
             esp_restart();
-        }
-    });
+        });
 
-    _mqtt_connection.set_configuration(&_configuration);
-    _device.set_configuration(&_configuration);
+    for (int i = 0; i < _configuration.get_devices().size(); i++) {
+        const auto& device = _configuration.get_devices()[i];
 
-    _mqtt_connection.begin();
+        REGISTER_DEVICE_BUTTON(device, i, "My", "my", "mdi:star", My, false);
+        REGISTER_DEVICE_BUTTON(device, i, "My (long)", "my_long", "mdi:star", My, true);
+        REGISTER_DEVICE_BUTTON(device, i, "Up", "up", "mdi:arrow-up-bold", Up, false);
+        REGISTER_DEVICE_BUTTON(device, i, "My Up", "my_up", "mdi:arrow-up-bold-circle", MyUp, false);
+        REGISTER_DEVICE_BUTTON(device, i, "Down", "down", "mdi:arrow-down-bold", Down, false);
+        REGISTER_DEVICE_BUTTON(device, i, "My Down", "my_down", "mdi:arrow-down-bold-circle", MyDown, false);
+        REGISTER_DEVICE_BUTTON(device, i, "Up Down", "up_down", "mdi:arrow-up-down-bold", UpDown, false);
+        REGISTER_DEVICE_BUTTON(device, i, "Up Down (long)", "up_down_long", "mdi:arrow-up-down-bold", UpDown, true);
+        REGISTER_DEVICE_BUTTON(device, i, "Prog", "prog", "mdi:cog", Prog, false);
+        REGISTER_DEVICE_BUTTON(device, i, "Prog (long)", "prog_long", "mdi:cog", Prog, true);
+        REGISTER_DEVICE_BUTTON(device, i, "Sun Flag", "sun_flag", "mdi:weather-sunny", SunFlag, false);
+        REGISTER_DEVICE_BUTTON(device, i, "Flag", "flag", "mdi:weather-sunny-off", Flag, false);
+    }
 }
 
-void Application::begin_after_initialization() {
-    // Log the reset reason.
-
-    auto reset_reason = esp_reset_reason();
-    ESP_LOGI(TAG, "esp_reset_reason: %s (%d)", esp_reset_reason_to_name(reset_reason), reset_reason);
-
-    ESP_LOGI(TAG, "Startup complete");
-}
-
-void Application::process() { _queue.process(); }
+void Application::do_ready() { ESP_ERROR_CHECK(_devices.begin()); }
