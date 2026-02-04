@@ -4,8 +4,6 @@
 
 using namespace std;
 
-#include "support.h"
-
 #include <ctype.h>
 #include <math.h>
 #include <string.h>
@@ -15,6 +13,7 @@ using namespace std;
 #include <string>
 
 #include "cJSON.h"
+#include "error.h"
 #include "esp_err.h"
 #include "esp_http_client.h"
 #include "esp_log.h"
