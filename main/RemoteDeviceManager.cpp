@@ -18,8 +18,8 @@ RemoteDeviceManager::RemoteDeviceManager() {
     _queue = xQueueCreate(10, sizeof(RemoteCommand));
     ESP_ASSERT_CHECK(_queue);
 
-    xTaskCreate([](auto arg) { ((RemoteDeviceManager*)arg)->task(); }, "RemoteDeviceManager::task",
-                CONFIG_ESP_MAIN_TASK_STACK_SIZE, this, 5, nullptr);
+    xTaskCreatePinnedToCore([](auto arg) { ((RemoteDeviceManager*)arg)->task(); }, "RemoteDeviceManager::task",
+                            CONFIG_ESP_MAIN_TASK_STACK_SIZE, this, 5, nullptr, 1);
 }
 
 esp_err_t RemoteDeviceManager::begin() {
