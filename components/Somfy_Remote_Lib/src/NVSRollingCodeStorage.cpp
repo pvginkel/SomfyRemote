@@ -6,7 +6,7 @@
 #include <nvs.h>
 #include <nvs_flash.h>
 
-NVSRollingCodeStorage::NVSRollingCodeStorage(const char *name, const char *key) : name(name), key(key) {}
+NVSRollingCodeStorage::NVSRollingCodeStorage(const char* name, const char* key) : name(name), key(key) {}
 
 uint16_t NVSRollingCodeStorage::nextCode() {
 	uint16_t code;
@@ -31,6 +31,7 @@ uint16_t NVSRollingCodeStorage::nextCode() {
 		case ESP_OK:
 			break;
 		case ESP_ERR_NVS_NOT_FOUND:
+			Serial.println("Rolling code not found, starting at 1");
 			code = 1;
 			break;
 		default:
