@@ -1,8 +1,8 @@
 #include "SomfyRemote.h"
 
-#define SYMBOL 640
+#define SYMBOL 604
 
-SomfyRemote::SomfyRemote(byte emitterPin, uint32_t remote, RollingCodeStorage *rollingCodeStorage)
+SomfyRemote::SomfyRemote(byte emitterPin, uint32_t remote, RollingCodeStorage* rollingCodeStorage)
 	: emitterPin(emitterPin), remote(remote), rollingCodeStorage(rollingCodeStorage) {}
 
 void SomfyRemote::setup() {
@@ -24,7 +24,7 @@ void SomfyRemote::sendCommandWithCode(Command command, uint16_t rollingCode, int
 	}
 }
 
-void SomfyRemote::printFrame(byte *frame) {
+void SomfyRemote::printFrame(byte* frame) {
 	for (byte i = 0; i < 7; i++) {
 		if (frame[i] >> 4 == 0) {  //  Displays leading zero in case the most significant
 			Serial.print("0");     // nibble is a 0.
@@ -35,7 +35,7 @@ void SomfyRemote::printFrame(byte *frame) {
 	Serial.println();
 }
 
-void SomfyRemote::buildFrame(byte *frame, Command command, uint16_t code) {
+void SomfyRemote::buildFrame(byte* frame, Command command, uint16_t code) {
 	const byte button = static_cast<byte>(command);
 	frame[0] = 0xA7;          // Encryption key. Doesn't matter much
 	frame[1] = button << 4;   // Which button did  you press? The 4 LSB will be the checksum
@@ -76,7 +76,7 @@ void SomfyRemote::buildFrame(byte *frame, Command command, uint16_t code) {
 #endif
 }
 
-void SomfyRemote::sendFrame(byte *frame, byte sync) {
+void SomfyRemote::sendFrame(byte* frame, byte sync) {
 	if (sync == 2) {  // Only with the first frame.
 		// Wake-up pulse & Silence
 		noInterrupts();
@@ -139,7 +139,7 @@ void SomfyRemote::sendLow(uint16_t durationInMicroseconds) {
 #endif
 }
 
-Command getSomfyCommand(const String &string) {
+Command getSomfyCommand(const String& string) {
 	if (string.equalsIgnoreCase("My")) {
 		return Command::My;
 	} else if (string.equalsIgnoreCase("Up")) {
