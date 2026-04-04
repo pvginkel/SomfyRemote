@@ -1,10 +1,11 @@
 #pragma once
 
 #include <Arduino.h>
+#include <esp32-hal-rmt.h>
 
 #include "RollingCodeStorage.h"
 
-#define SOMFY_MS_PER_ITER 165
+#define SOMFY_MS_PER_ITER 137
 #define SOMFY_MS_TO_ITERS(ms) (((ms) + SOMFY_MS_PER_ITER - 1) / SOMFY_MS_PER_ITER)
 
 enum class Command : byte {
@@ -28,9 +29,6 @@ private:
 	void buildFrame(byte* frame, Command command, uint16_t code);
 	void sendFrame(byte* frame, byte sync);
 	void printFrame(byte* frame);
-
-	void sendHigh(uint16_t durationInMicroseconds);
-	void sendLow(uint16_t durationInMicroseconds);
 
 public:
 	SomfyRemote(byte emitterPin, uint32_t remote, RollingCodeStorage* rollingCodeStorage);

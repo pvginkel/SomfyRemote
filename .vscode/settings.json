@@ -75,5 +75,5 @@
     "--query-driver=C:\\Users\\pvgin\\.espressif\\tools\\xtensa-esp-elf\\esp-14.2.0_20241119\\xtensa-esp-elf\\bin\\xtensa-esp32s3-elf-gcc.exe",
     "--compile-commands-dir=c:\\Projects\\SomfyRemote\\build"
   ],
-  "idf.currentSetup": "C:\\Users\\pvgin\\esp\\v5.5.2\\esp-idf"
+  "idf.currentSetup": "C:\\esp\\v5.5.3\\esp-idf"
 }

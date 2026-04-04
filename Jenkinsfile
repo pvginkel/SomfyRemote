@@ -5,7 +5,7 @@ withCredentials([
     string(credentialsId: 'IOTSUPPORT_CLIENT_SECRET', variable: 'IOTSUPPORT_CLIENT_SECRET'),
 ]) {
     podTemplate(inheritFrom: 'jenkins-agent-large', containers: [
-        containerTemplate(name: 'idf', image: 'espressif/idf:v5.5.2', command: 'sleep', args: 'infinity', envVars: [
+        containerTemplate(name: 'idf', image: 'espressif/idf:v5.5.3', command: 'sleep', args: 'infinity', envVars: [
             containerEnvVar(key: 'IOTSUPPORT_CLIENT_ID', value: '$IOTSUPPORT_CLIENT_ID'),
             containerEnvVar(key: 'IOTSUPPORT_CLIENT_SECRET', value: '$IOTSUPPORT_CLIENT_SECRET'),
         ])
