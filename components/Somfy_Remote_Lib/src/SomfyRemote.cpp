@@ -12,14 +12,9 @@ SomfyRemote::SomfyRemote(byte emitterPin, uint32_t remote, RollingCodeStorage *r
 	: emitterPin(emitterPin), remote(remote), rollingCodeStorage(rollingCodeStorage) {}
 
 void SomfyRemote::setup() {
-	if (!rmtInit(emitterPin, RMT_TX_MODE, RMT_MEM_NUM_BLOCKS_1, 1000000)) { // 1µs resolution
-		ESP_LOGE(TAG, "rmtInit failed for pin %d", emitterPin);
-		return;
-	}
-	if (!rmtSetEOT(emitterPin, 0)) { // LOW after transmission
-		ESP_LOGE(TAG, "rmtSetEOT failed for pin %d", emitterPin);
-	}
-	ESP_LOGI(TAG, "RMT initialized on pin %d", emitterPin);
+	// RMT initialization is done once, in RemoteDeviceManager::begin(), after the
+	// CC1101 is configured (CC1101::setGDO() calls pinMode() on the GDO0 pin,
+	// which would otherwise steal the pin back from the RMT peripheral).
 }
 
 void SomfyRemote::sendCommand(Command command, int repeat) {

@@ -2,6 +2,8 @@
 
 // Comment to ensure that the ELECHOUSE_CC1101_SRC_DRV.h file stays at the top.
 
+#include <esp32-hal-rmt.h>
+
 #include "support.h"
 
 #include "RemoteDeviceManager.h"
@@ -34,6 +36,17 @@ esp_err_t RemoteDeviceManager::begin() {
     ELECHOUSE_cc1101.setMHZ(433.42);
 
     ESP_LOGI(TAG, "Successfully initialized the CC1101");
+
+    // Initialize the RMT peripheral on the GDO0 pin for Somfy transmission.
+    // Must happen after CC1101 init since setGDO()/Init() claim the pin via pinMode().
+    if (!rmtInit(CONFIG_DEVICE_GDO0_PIN, RMT_TX_MODE, RMT_MEM_NUM_BLOCKS_1, 1000000)) {
+        ESP_LOGE(TAG, "Failed to initialize RMT on pin %d", CONFIG_DEVICE_GDO0_PIN);
+        return ESP_FAIL;
+    }
+    if (!rmtSetEOT(CONFIG_DEVICE_GDO0_PIN, 0)) {
+        ESP_LOGE(TAG, "Failed to set RMT EOT level on pin %d", CONFIG_DEVICE_GDO0_PIN);
+    }
+    ESP_LOGI(TAG, "RMT initialized on pin %d", CONFIG_DEVICE_GDO0_PIN);
 
     return ESP_OK;
 }
