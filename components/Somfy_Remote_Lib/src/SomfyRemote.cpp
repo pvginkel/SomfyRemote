@@ -2,20 +2,24 @@
 
 #include <vector>
 
+#include "esp_log.h"
+
 #define SYMBOL 640
+
+static const char *TAG = "SomfyRemote";
 
 SomfyRemote::SomfyRemote(byte emitterPin, uint32_t remote, RollingCodeStorage *rollingCodeStorage)
 	: emitterPin(emitterPin), remote(remote), rollingCodeStorage(rollingCodeStorage) {}
 
 void SomfyRemote::setup() {
 	if (!rmtInit(emitterPin, RMT_TX_MODE, RMT_MEM_NUM_BLOCKS_1, 1000000)) { // 1µs resolution
-		Serial.printf("SomfyRemote: rmtInit failed for pin %d\n", emitterPin);
+		ESP_LOGE(TAG, "rmtInit failed for pin %d", emitterPin);
 		return;
 	}
 	if (!rmtSetEOT(emitterPin, 0)) { // LOW after transmission
-		Serial.printf("SomfyRemote: rmtSetEOT failed for pin %d\n", emitterPin);
+		ESP_LOGE(TAG, "rmtSetEOT failed for pin %d", emitterPin);
 	}
-	Serial.printf("SomfyRemote: RMT initialized on pin %d\n", emitterPin);
+	ESP_LOGI(TAG, "RMT initialized on pin %d", emitterPin);
 }
 
 void SomfyRemote::sendCommand(Command command, int repeat) {
@@ -64,10 +68,10 @@ void SomfyRemote::sendCommandWithCode(Command command, uint16_t rollingCode, int
 		}
 	}
 
-	Serial.printf("SomfyRemote: transmitting %u RMT symbols (%d frames) on pin %d\n",
-				  (unsigned)symbols.size(), 1 + repeat, emitterPin);
+	ESP_LOGI(TAG, "transmitting %u RMT symbols (%d frames) on pin %d",
+			 (unsigned)symbols.size(), 1 + repeat, emitterPin);
 	bool ok = rmtWrite(emitterPin, symbols.data(), symbols.size(), RMT_WAIT_FOR_EVER);
-	Serial.printf("SomfyRemote: rmtWrite returned %s\n", ok ? "true" : "false");
+	ESP_LOGI(TAG, "rmtWrite returned %s", ok ? "true" : "false");
 }
 
 void SomfyRemote::printFrame(byte *frame) {
