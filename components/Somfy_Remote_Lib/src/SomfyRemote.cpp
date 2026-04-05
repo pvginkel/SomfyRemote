@@ -1,13 +1,21 @@
 #include "SomfyRemote.h"
 
+#include <vector>
+
 #define SYMBOL 640
 
 SomfyRemote::SomfyRemote(byte emitterPin, uint32_t remote, RollingCodeStorage *rollingCodeStorage)
 	: emitterPin(emitterPin), remote(remote), rollingCodeStorage(rollingCodeStorage) {}
 
 void SomfyRemote::setup() {
-	pinMode(emitterPin, OUTPUT);
-	digitalWrite(emitterPin, LOW);
+	if (!rmtInit(emitterPin, RMT_TX_MODE, RMT_MEM_NUM_BLOCKS_1, 1000000)) { // 1µs resolution
+		Serial.printf("SomfyRemote: rmtInit failed for pin %d\n", emitterPin);
+		return;
+	}
+	if (!rmtSetEOT(emitterPin, 0)) { // LOW after transmission
+		Serial.printf("SomfyRemote: rmtSetEOT failed for pin %d\n", emitterPin);
+	}
+	Serial.printf("SomfyRemote: RMT initialized on pin %d\n", emitterPin);
 }
 
 void SomfyRemote::sendCommand(Command command, int repeat) {
@@ -18,10 +26,48 @@ void SomfyRemote::sendCommand(Command command, int repeat) {
 void SomfyRemote::sendCommandWithCode(Command command, uint16_t rollingCode, int repeat) {
 	byte frame[7];
 	buildFrame(frame, command, rollingCode);
-	sendFrame(frame, 2);
-	for (int i = 0; i < repeat; i++) {
-		sendFrame(frame, 7);
+
+	// Build the entire multi-frame transmission as one continuous RMT sequence.
+	//
+	// The Somfy protocol requires 2 hardware sync pulses before the first frame
+	// and 7 before subsequent frames. We achieve this by structuring each repeated
+	// chunk as: [2 sync + sw sync + data + inter-frame silence + 5 sync]
+	//
+	// When repeated, the trailing 5 sync from one chunk plus the leading 2 sync
+	// from the next chunk gives the required 7 sync for subsequent frames.
+
+	std::vector<rmt_data_t> symbols;
+
+	for (int n = 0; n < 1 + repeat; n++) {
+		// Hardware sync: 2 pulses
+		for (int i = 0; i < 2; i++) {
+			symbols.push_back({.duration0 = 4 * SYMBOL, .level0 = 1, .duration1 = 4 * SYMBOL, .level1 = 0});
+		}
+
+		// Software sync
+		symbols.push_back({.duration0 = 4550, .level0 = 1, .duration1 = SYMBOL, .level1 = 0});
+
+		// Data: bits are sent one by one, starting with the MSB.
+		for (byte i = 0; i < 56; i++) {
+			if (((frame[i / 8] >> (7 - (i % 8))) & 1) == 1) {
+				symbols.push_back({.duration0 = SYMBOL, .level0 = 0, .duration1 = SYMBOL, .level1 = 1});
+			} else {
+				symbols.push_back({.duration0 = SYMBOL, .level0 = 1, .duration1 = SYMBOL, .level1 = 0});
+			}
+		}
+
+		// Inter-frame silence + 5 trailing hardware sync pulses (which combine
+		// with the next chunk's 2 leading sync to form 7 sync pulses).
+		symbols.push_back({.duration0 = 30415, .level0 = 0, .duration1 = 0, .level1 = 0});
+		for (int i = 0; i < 5; i++) {
+			symbols.push_back({.duration0 = 4 * SYMBOL, .level0 = 1, .duration1 = 4 * SYMBOL, .level1 = 0});
+		}
 	}
+
+	Serial.printf("SomfyRemote: transmitting %u RMT symbols (%d frames) on pin %d\n",
+				  (unsigned)symbols.size(), 1 + repeat, emitterPin);
+	bool ok = rmtWrite(emitterPin, symbols.data(), symbols.size(), RMT_WAIT_FOR_EVER);
+	Serial.printf("SomfyRemote: rmtWrite returned %s\n", ok ? "true" : "false");
 }
 
 void SomfyRemote::printFrame(byte *frame) {
@@ -77,66 +123,7 @@ void SomfyRemote::buildFrame(byte *frame, Command command, uint16_t code) {
 }
 
 void SomfyRemote::sendFrame(byte *frame, byte sync) {
-	if (sync == 2) {  // Only with the first frame.
-		// Wake-up pulse & Silence
-		noInterrupts();
-		sendHigh(9415);
-		sendLow(9565);
-		interrupts();
-		delay(80);
-	}
-
-	// Disable interrupts for the timing-critical transmission.
-	noInterrupts();
-
-	// Hardware sync: two sync for the first frame, seven for the following ones.
-	for (int i = 0; i < sync; i++) {
-		sendHigh(4 * SYMBOL);
-		sendLow(4 * SYMBOL);
-	}
-
-	// Software sync
-	sendHigh(4550);
-	sendLow(SYMBOL);
-
-	// Data: bits are sent one by one, starting with the MSB.
-	for (byte i = 0; i < 56; i++) {
-		if (((frame[i / 8] >> (7 - (i % 8))) & 1) == 1) {
-			sendLow(SYMBOL);
-			sendHigh(SYMBOL);
-		} else {
-			sendHigh(SYMBOL);
-			sendLow(SYMBOL);
-		}
-	}
-
-	// Inter-frame silence
-	sendLow(415);
-
-	interrupts();
-	delay(30);
-}
-
-void SomfyRemote::sendHigh(uint16_t durationInMicroseconds) {
-#if defined(ESP32) || defined(ESP8266)
-	digitalWrite(emitterPin, HIGH);
-	delayMicroseconds(durationInMicroseconds);
-#elif defined(ARDUINO_ARCH_AVR)
-	// TODO fast write
-	digitalWrite(emitterPin, HIGH);
-	delayMicroseconds(durationInMicroseconds);
-#endif
-}
-
-void SomfyRemote::sendLow(uint16_t durationInMicroseconds) {
-#if defined(ESP32) || defined(ESP8266)
-	digitalWrite(emitterPin, LOW);
-	delayMicroseconds(durationInMicroseconds);
-#elif defined(ARDUINO_ARCH_AVR)
-	// TODO fast write
-	digitalWrite(emitterPin, LOW);
-	delayMicroseconds(durationInMicroseconds);
-#endif
+	// No longer used — transmission is handled entirely by sendCommandWithCode.
 }
 
 Command getSomfyCommand(const String &string) {
