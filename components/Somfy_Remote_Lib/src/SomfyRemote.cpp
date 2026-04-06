@@ -26,7 +26,16 @@ void SomfyRemote::sendCommandWithCode(Command command, uint16_t rollingCode, int
 	byte frame[7];
 	buildFrame(frame, command, rollingCode);
 
+	// Wake-up pulse & silence (only before the first frame).
+	rmt_data_t wakeup = {.duration0 = 9415, .level0 = 1, .duration1 = 9565, .level1 = 0};
+	rmtWrite(emitterPin, &wakeup, 1, RMT_WAIT_FOR_EVER);
+	delay(80);
+
 	// Build the entire multi-frame transmission as one continuous RMT sequence.
+	//
+	// We build a flat list of phases (each a duration + level half-symbol), then
+	// pack them pairwise into RMT symbols. This avoids placing a zero-duration
+	// field mid-sequence (which the RMT peripheral treats as end-of-transmission).
 	//
 	// The Somfy protocol requires 2 hardware sync pulses before the first frame
 	// and 7 before subsequent frames. We achieve this by structuring each repeated
@@ -35,38 +44,65 @@ void SomfyRemote::sendCommandWithCode(Command command, uint16_t rollingCode, int
 	// When repeated, the trailing 5 sync from one chunk plus the leading 2 sync
 	// from the next chunk gives the required 7 sync for subsequent frames.
 
-	std::vector<rmt_data_t> symbols;
+	struct Phase {
+		uint16_t duration;
+		uint8_t level;
+	};
+
+	std::vector<Phase> phases;
 
 	for (int n = 0; n < 1 + repeat; n++) {
 		// Hardware sync: 2 pulses
 		for (int i = 0; i < 2; i++) {
-			symbols.push_back({.duration0 = 4 * SYMBOL, .level0 = 1, .duration1 = 4 * SYMBOL, .level1 = 0});
+			phases.push_back({4 * SYMBOL, 1});
+			phases.push_back({4 * SYMBOL, 0});
 		}
 
 		// Software sync
-		symbols.push_back({.duration0 = 4550, .level0 = 1, .duration1 = SYMBOL, .level1 = 0});
+		phases.push_back({4550, 1});
+		phases.push_back({SYMBOL, 0});
 
 		// Data: bits are sent one by one, starting with the MSB.
 		for (byte i = 0; i < 56; i++) {
 			if (((frame[i / 8] >> (7 - (i % 8))) & 1) == 1) {
-				symbols.push_back({.duration0 = SYMBOL, .level0 = 0, .duration1 = SYMBOL, .level1 = 1});
+				phases.push_back({SYMBOL, 0});
+				phases.push_back({SYMBOL, 1});
 			} else {
-				symbols.push_back({.duration0 = SYMBOL, .level0 = 1, .duration1 = SYMBOL, .level1 = 0});
+				phases.push_back({SYMBOL, 1});
+				phases.push_back({SYMBOL, 0});
 			}
 		}
 
 		// Inter-frame silence + 5 trailing hardware sync pulses (which combine
 		// with the next chunk's 2 leading sync to form 7 sync pulses).
-		symbols.push_back({.duration0 = 30415, .level0 = 0, .duration1 = 0, .level1 = 0});
+		phases.push_back({30415, 0});
 		for (int i = 0; i < 5; i++) {
-			symbols.push_back({.duration0 = 4 * SYMBOL, .level0 = 1, .duration1 = 4 * SYMBOL, .level1 = 0});
+			phases.push_back({4 * SYMBOL, 1});
+			phases.push_back({4 * SYMBOL, 0});
 		}
+	}
+
+	// Pack phases pairwise into RMT symbols.
+	std::vector<rmt_data_t> symbols;
+	for (size_t i = 0; i < phases.size(); i += 2) {
+		rmt_data_t sym = {};
+		sym.duration0 = phases[i].duration;
+		sym.level0 = phases[i].level;
+		if (i + 1 < phases.size()) {
+			sym.duration1 = phases[i + 1].duration;
+			sym.level1 = phases[i + 1].level;
+		}
+		symbols.push_back(sym);
 	}
 
 	ESP_LOGI(TAG, "transmitting %u RMT symbols (%d frames) on pin %d",
 			 (unsigned)symbols.size(), 1 + repeat, emitterPin);
 	bool ok = rmtWrite(emitterPin, symbols.data(), symbols.size(), RMT_WAIT_FOR_EVER);
 	ESP_LOGI(TAG, "rmtWrite returned %s", ok ? "true" : "false");
+
+	// Inter-command silence so that a subsequent command's wake-up pulse is not
+	// mistaken for part of this transmission.
+	delay(80);
 }
 
 void SomfyRemote::printFrame(byte *frame) {

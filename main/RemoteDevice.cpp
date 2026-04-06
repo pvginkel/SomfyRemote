@@ -58,7 +58,7 @@ void RemoteDevice::send_command(RemoteCommandId command_id, bool long_press) {
         // second long press works sometimes, but not consistently.
         repeat = command_id == RemoteCommandId::My ? SOMFY_MS_TO_ITERS(4000) : SOMFY_MS_TO_ITERS(2000);
     } else {
-        repeat = 4;
+        repeat = 2;
     }
 
     ((SomfyRemoteWrapper*)_somfy_remote)->remote.sendCommand(static_cast<Command>(command_id), repeat);
