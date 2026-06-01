@@ -1,0 +1,47 @@
+schemaVersion: "0.1"
+producer: somfy-remote
+
+# Somfy Remote — ESP32-S3 firmware that transmits Somfy RTS commands to roller
+# shutters over a CC1101 433.42 MHz radio, driven by MQTT buttons. Rolling codes
+# are kept in NVS.
+#
+# This repo introduces the FIRMWARE, not the physical device (registered in IoT
+# Support, generated as a device: instance there). Universal esp-mdm platform
+# edges only; the 433 MHz RF link to the blinds is a non-IP radio with no
+# addressable counterpart to model. NVS-provisioned addresses → no boundBy.
+
+systemSoftware:
+  - id: ss:somfy-remote,3e684732-6621-4297-926f-a4d9f82c538e
+    label: Somfy Remote firmware
+    summary: >-
+      ESP-IDF firmware (ESP32-S3 + CC1101) transmitting Somfy RTS rolling-code
+      commands to roller shutters at 433.42 MHz, controlled via MQTT buttons;
+      managed over the air by IoT Support.
+    introduced: 2024-09-15
+    lifecycle: active
+    stereotype: SoftwareProduct
+    sourceRepository: git:pvginkel/SomfyRemote
+    stats:
+      mcu: esp32-s3
+      radio: CC1101 433.42 MHz
+
+relations:
+  - id: rel:somfy-remote-consumes-iotsupport
+    source: ss:somfy-remote,3e684732-6621-4297-926f-a4d9f82c538e
+    target: svc:iotsupport-api,b7c5b5ba-36eb-47b8-bf7e-5c50fa1a3656
+    type: Association
+  - id: rel:somfy-remote-consumes-pub-sub
+    source: ss:somfy-remote,3e684732-6621-4297-926f-a4d9f82c538e
+    target: cap:pub-sub-broker
+    type: Association
+  - id: rel:somfy-remote-consumes-iam
+    source: ss:somfy-remote,3e684732-6621-4297-926f-a4d9f82c538e
+    target: cap:iam
+    type: Association
+
+  # ── Home Assistant MQTT integration: publishes HA discovery entities
+  # (the per-shutter buttons); topic convention hardcoded → no boundBy. ──
+  - id: rel:somfy-remote-ha-mqtt
+    source: ss:somfy-remote,3e684732-6621-4297-926f-a4d9f82c538e
+    target: svc:home-assistant-mqtt,23572189-9185-4a6d-a073-2b2820578e11
+    type: Association
