@@ -45,3 +45,10 @@ relations:
     source: ss:somfy-remote,3e684732-6621-4297-926f-a4d9f82c538e
     target: svc:home-assistant-mqtt,23572189-9185-4a6d-a073-2b2820578e11
     type: Association
+
+  # Realizes the IoT-device capability — the selection axis for the IoT view
+  # (in-house ESP32 firmware, managed by IoTSupport, integrated via MQTT discovery).
+  - id: rel:somfy-remote-realizes-iot-device
+    source: ss:somfy-remote,3e684732-6621-4297-926f-a4d9f82c538e
+    target: cap:iot-device
+    type: Realization
